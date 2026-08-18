@@ -6,7 +6,8 @@
   "notes": [
     "Package names are resolved against the current Ubuntu 24.04 repositories when an offline bundle is built.",
     "Kernel drivers such as bcm5974, hid_apple, applesmc, apple_gmux, btusb and uvcvideo are not replaced by these packages.",
-    "Conditional and experimental sets are never auto-installed without matching evidence."
+    "Conditional and experimental sets are never auto-installed without matching evidence.",
+    "Repair sets are cached in full bundles for offline reinstallation but are not auto-installed on healthy systems."
   ],
   "sets": {
     "runtime_core": {
@@ -45,6 +46,42 @@
         "brightnessctl",
         "acpi",
         "upower"
+      ]
+    },
+    "network_stack_repair": {
+      "class": "repair",
+      "status": "stable",
+      "auto_install": false,
+      "packages": [
+        "network-manager",
+        "wpasupplicant"
+      ],
+      "notes": [
+        "Cached for offline reinstall/repair when the normal Ubuntu network userspace stack is damaged; not a substitute for selecting the correct kernel Wi-Fi driver."
+      ]
+    },
+    "x11_input_stack_repair": {
+      "class": "repair",
+      "status": "stable",
+      "auto_install": false,
+      "packages": [
+        "xserver-xorg-input-libinput"
+      ],
+      "notes": [
+        "Xorg libinput driver repair payload for the current X11 stable baseline. Kernel Apple trackpad support still comes from bcm5974."
+      ]
+    },
+    "audio_stack_repair": {
+      "class": "repair",
+      "status": "stable",
+      "auto_install": false,
+      "packages": [
+        "pipewire-audio",
+        "wireplumber",
+        "libspa-0.2-bluetooth"
+      ],
+      "notes": [
+        "Offline repair payload for the standard PipeWire/WirePlumber desktop audio path, including PipeWire Bluetooth plugins."
       ]
     },
     "bluetooth_firmware": {
@@ -147,6 +184,9 @@
     "full": [
       "runtime_core",
       "diagnostics",
+      "network_stack_repair",
+      "x11_input_stack_repair",
+      "audio_stack_repair",
       "bluetooth_firmware",
       "integration_media",
       "optional_ui",
