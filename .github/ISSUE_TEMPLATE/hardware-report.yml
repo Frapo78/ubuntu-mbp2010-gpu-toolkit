@@ -1,0 +1,70 @@
+name: Hardware compatibility report
+description: Report Ubuntu graphics behavior on a 2010 MacBook Pro using a redacted diagnostic report.
+title: "[Hardware] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve compatibility. Please do not post serial numbers, UUIDs, account names, private paths, or unrelated logs.
+
+  - type: input
+    id: model
+    attributes:
+      label: Mac model identifier
+      description: Example: MacBookPro6,2
+      placeholder: MacBookPro6,2
+    validations:
+      required: true
+
+  - type: input
+    id: ubuntu
+    attributes:
+      label: Ubuntu version
+      placeholder: Ubuntu 24.04.4 LTS
+    validations:
+      required: true
+
+  - type: input
+    id: kernel
+    attributes:
+      label: Kernel
+      placeholder: 7.0.0-29-generic
+    validations:
+      required: true
+
+  - type: dropdown
+    id: session
+    attributes:
+      label: Desktop session
+      options:
+        - X11
+        - Wayland
+        - Other / unknown
+    validations:
+      required: true
+
+  - type: textarea
+    id: symptoms
+    attributes:
+      label: Symptoms
+      description: Describe freezes, black screens, duplicate displays, browser problems, power issues, or other graphics behavior.
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Redacted diagnostics
+      description: Paste relevant output from scripts/collect-diagnostics.sh, after removing personal identifiers.
+      render: shell
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed serial numbers, UUIDs, account names, and private paths from the report.
+          required: true
+        - label: I have not installed NVIDIA 340 as part of this troubleshooting attempt.
+          required: false
