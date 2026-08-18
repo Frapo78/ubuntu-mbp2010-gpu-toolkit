@@ -18,6 +18,9 @@ jobs:
       - name: Validate machine-readable knowledge and profiles
         run: python3 tests/test_repository.py
 
+      - name: Validate package manifests and offline safety policy
+        run: python3 tests/test_packages.py
+
       - name: Parse all shell scripts
         shell: bash
         run: |
@@ -34,4 +37,4 @@ jobs:
           while IFS= read -r -d '' file; do
             echo "json $file"
             python3 -m json.tool "$file" >/dev/null
-          done < <(find knowledge profiles -type f -name '*.json' -print0)
+          done < <(find knowledge profiles packages -type f -name '*.json' -print0)
