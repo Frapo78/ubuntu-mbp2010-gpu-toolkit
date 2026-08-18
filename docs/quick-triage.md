@@ -10,7 +10,7 @@ Run:
 cat /sys/devices/virtual/dmi/id/product_name
 uname -a
 printf 'session=%s\n' "$XDG_SESSION_TYPE"
-lspci -nnk | grep -A4 -Ei 'VGA|3D|Display'
+lspci -nnk | grep -A4 -Ei 'VGA|3D|Display|Network'
 ```
 
 For the fully investigated reference path, the expected model is:
@@ -21,14 +21,134 @@ MacBookPro6,2
 
 If the model differs, collect diagnostics and use the repository as evidence, not as permission to run model-specific scripts blindly.
 
-## 1. Best first command
+## 1. Best first commands
+
+Graphics/system report:
 
 ```bash
 chmod +x scripts/collect-diagnostics.sh
 ./scripts/collect-diagnostics.sh
 ```
 
-Use the report to match one of the cases below or the machine-readable entries in `knowledge/cases.json`.
+Whole-Mac integration report (trackpad, keyboard LEDs, Wi-Fi, Bluetooth, audio, camera, battery, sensors, storage):
+
+```bash
+chmod +x scripts/integration-probe.sh
+./scripts/integration-probe.sh
+```
+
+Use the reports to match `knowledge/cases.json` or `knowledge/integration-cases.json`.
+
+---
+
+## Symptom: no Internet / Wi-Fi is broken and packages are needed now
+
+Do not start guessing Broadcom drivers from the MacBook name.
+
+### Fast checks
+
+```bash
+lspci -nnk | grep -A5 -Ei 'Network|Wireless|Broadcom'
+rfkill list
+iw dev
+journalctl -b -k --no-pager | grep -Ei 'b43|brcm|broadcom|\bwl\b|firmware.*(wifi|wlan)'
+```
+
+If the machine is offline but a toolkit USB bundle is available:
+
+```bash
+./scripts/offline/verify-bundle.sh /path/to/bundle
+./scripts/offline/install-bundle.sh /path/to/bundle --dry-run
+```
+
+The default installer only applies stable runtime/diagnostic package sets. Broadcom STA or b43 sets require explicit selection and experimental consent after classification.
+
+See `docs/offline-rescue.md`, `docs/hardware-integration.md` and integration case `I003`.
+
+---
+
+## Symptom: trackpad missing, gestures/clicks wrong, or keyboard behavior odd
+
+First determine whether this is kernel device detection, libinput configuration or a physical issue.
+
+```bash
+lsmod | grep -E 'bcm5974|hid_apple'
+grep -Ei 'Name=|Handlers=|Phys=' /proc/bus/input/devices
+libinput list-devices
+```
+
+The Apple multitouch trackpad path is normally the kernel `bcm5974` driver. `libinput-tools`, `evtest` and `xinput` help diagnose it; they are not replacement kernel drivers.
+
+For function/media keys inspect `hid_apple` and actual events before adding legacy hotkey daemons such as `pommed`.
+
+See integration cases `I001` and `I005`.
+
+---
+
+## Symptom: keyboard backlight or brightness keys do not work
+
+Separate keyboard LEDs from display backlight.
+
+```bash
+find /sys/class/leds -maxdepth 1 -type l -printf '%f\n' 2>/dev/null
+find /sys/class/backlight -maxdepth 1 -type l -printf '%f\n' 2>/dev/null
+lsmod | grep -E 'applesmc|hid_apple'
+```
+
+If an LED endpoint ending in `kbd_backlight` exists, test it through `brightnessctl` before installing a separate daemon.
+
+If no endpoint exists, installing a userspace brightness tool cannot create the missing kernel/platform device.
+
+See integration case `I002`.
+
+---
+
+## Symptom: Bluetooth toggle/controller is missing
+
+```bash
+lsusb
+lsmod | grep btusb
+rfkill list bluetooth
+systemctl status bluetooth.service --no-pager
+bluetoothctl show
+journalctl -b -k --no-pager | grep -Ei 'bluetooth|btusb|firmware'
+```
+
+`bluez` is the userspace runtime. `bluez-firmware` is conditional; install it only if controller identity/logs justify it. `blueman` is optional UI, not a driver fix.
+
+See integration case `I004`.
+
+---
+
+## Symptom: high temperatures or strange fan behavior
+
+Do not immediately install a fan daemon.
+
+```bash
+sensors
+find /sys/devices/platform -maxdepth 4 \( -iname '*applesmc*' -o -iname '*fan*' -o -iname '*temp*' \) -print
+journalctl -b -k --no-pager | grep -Ei 'thermal|thrott|temperature'
+```
+
+The project keeps `mbpfan`/`macfanctld` as experimental until model-specific thermal behavior is validated. Never enable both.
+
+See integration case `I006`.
+
+---
+
+## Symptom: audio, camera or optical drive missing
+
+Check whether the kernel sees the device before changing desktop/application configuration.
+
+```bash
+aplay -l
+arecord -l
+v4l2-ctl --list-devices
+lsblk
+ls -l /dev/sr* /dev/video* 2>/dev/null
+```
+
+See integration case `I007` and `docs/hardware-integration.md`.
 
 ---
 
@@ -180,8 +300,9 @@ This path is currently `rejected` for automation.
 
 ## If the symptom does not match
 
-1. collect diagnostics;
+1. collect both graphics/system and integration diagnostics where relevant;
 2. preserve timestamps and exact error strings;
 3. do not apply multiple speculative changes;
-4. search `knowledge/cases.json` and `docs/failed-experiments.md`;
-5. open an issue using the repository diagnostic template.
+4. search `knowledge/cases.json`, `knowledge/integration-cases.json` and `docs/failed-experiments.md`;
+5. if Internet is unavailable, use the offline bundle only for classified actions;
+6. open an issue using the repository diagnostic template.
