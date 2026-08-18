@@ -5,23 +5,32 @@ export LC_ALL=C
 BUNDLE=""
 EXTRA_SETS=()
 DRY_RUN=0
+ALLOW_EXPERIMENTAL=0
 
 usage(){
   cat <<'EOF'
 Usage: install-bundle.sh /path/to/bundle [options]
 
 Default behavior installs only package sets marked auto_install=true.
-Conditional driver sets require explicit --set.
+Conditional driver sets require BOTH explicit --set and --allow-experimental
+until that driver path has been promoted by model-specific evidence.
 
 Options:
-  --set NAME    Explicitly install an additional package set (repeatable)
-  --dry-run     Show selected sets/packages without installing
-  -h, --help    Show help
+  --set NAME             Explicitly install an additional package set (repeatable)
+  --allow-experimental   Allow reviewed experimental conditional-driver sets
+  --dry-run              Show selected sets/packages without installing
+  -h, --help             Show help
 
 Examples:
   install-bundle.sh /media/USB/mbp-rescue
-  install-bundle.sh /media/USB/mbp-full --set wifi_broadcom_sta
-  install-bundle.sh /media/USB/mbp-full --set wifi_b43_tools
+  install-bundle.sh /media/USB/mbp-full --dry-run
+
+After hardware classification only:
+  install-bundle.sh /media/USB/mbp-full \
+    --set wifi_broadcom_sta --allow-experimental
+
+  install-bundle.sh /media/USB/mbp-full \
+    --set wifi_b43_tools --allow-experimental
 EOF
 }
 
@@ -30,6 +39,7 @@ BUNDLE="$1"; shift
 while [ $# -gt 0 ]; do
   case "$1" in
     --set) EXTRA_SETS+=("${2:?missing set name}"); shift 2 ;;
+    --allow-experimental) ALLOW_EXPERIMENTAL=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
@@ -96,16 +106,41 @@ done
 # Deduplicate sets.
 mapfile -t SETS < <(printf '%s\n' "${SETS[@]}" | sed '/^$/d' | sort -u)
 
-# Experimental sets are never installable through this generic installer.
+CONDITIONAL_SELECTED=0
 for s in "${SETS[@]}"; do
-  STATUS="$(python3 - "$MANIFEST" "$s" <<'PY'
+  readarray -t INFO < <(python3 - "$MANIFEST" "$s" <<'PY'
 import json,sys
-print(json.load(open(sys.argv[1]))['sets'][sys.argv[2]].get('status','unknown'))
+x=json.load(open(sys.argv[1]))['sets'][sys.argv[2]]
+print(x.get('status','unknown'))
+print(x.get('class','unknown'))
 PY
-)"
-  if [ "$STATUS" = "experimental" ]; then
-    echo "Refusing experimental package set through generic offline installer: $s" >&2
-    exit 7
+)
+  STATUS="${INFO[0]}"
+  CLASS="${INFO[1]}"
+
+  case "$STATUS" in
+    rejected|planned)
+      echo "Refusing package set with maturity '$STATUS': $s" >&2
+      exit 7
+      ;;
+    experimental)
+      if [ "$CLASS" = "conditional_driver" ] && [ "$ALLOW_EXPERIMENTAL" -eq 1 ]; then
+        echo "WARNING: explicitly allowing experimental conditional driver set: $s" >&2
+      else
+        echo "Refusing experimental set: $s" >&2
+        echo "Only reviewed class=conditional_driver sets can be enabled with --allow-experimental." >&2
+        exit 7
+      fi
+      ;;
+    stable|proven) ;;
+    *)
+      echo "Refusing package set with unknown maturity '$STATUS': $s" >&2
+      exit 7
+      ;;
+  esac
+
+  if [ "$CLASS" = "conditional_driver" ]; then
+    CONDITIONAL_SELECTED=1
   fi
 done
 
@@ -133,9 +168,9 @@ out=[]
 for name in sets:
     for p in m['sets'][name]['packages']:
         p=p.replace('@KERNEL@',kernel)
-        # firmware-b43-installer is deliberately not run offline: its normal
-        # behavior is to fetch proprietary firmware from the network. The
-        # captured firmware tree is installed separately below.
+        # Never run firmware-b43-installer offline: its normal behavior is to
+        # fetch proprietary firmware from the network. A captured firmware
+        # tree is installed separately below.
         if name=='wifi_b43_tools' and p=='firmware-b43-installer':
             continue
         if p not in out: out.append(p)
@@ -143,9 +178,9 @@ for p in out: print(p)
 PY
 )
 
-echo "Target model:  $MODEL"
-echo "Ubuntu:       $CODENAME/$ARCH"
-echo "Kernel:       $KERNEL"
+echo "Target model:   $MODEL"
+echo "Ubuntu:        $CODENAME/$ARCH"
+echo "Kernel:        $KERNEL"
 echo "Selected sets:"
 printf '  %s\n' "${SETS[@]}"
 echo "Packages:"
@@ -162,11 +197,12 @@ WORK="/var/tmp/mbp-offline-$TS"
 mkdir -p "$STATE"
 
 # Checkpoint before any conditional driver package can change module policy.
-if printf '%s\n' "${SETS[@]}" | grep -Eq '^wifi_'; then
+if [ "$CONDITIONAL_SELECTED" -eq 1 ]; then
   mkdir -p "$STATE/modprobe.d-before"
   sudo cp -a /etc/modprobe.d/. "$STATE/modprobe.d-before/" 2>/dev/null || true
   lsmod > "$STATE/lsmod-before.txt"
   lspci -nnk > "$STATE/lspci-before.txt" 2>/dev/null || true
+  rfkill list > "$STATE/rfkill-before.txt" 2>/dev/null || true
 fi
 
 mkdir -p "$WORK"
@@ -206,6 +242,7 @@ fi
   echo "arch=$ARCH"
   echo "kernel=$KERNEL"
   printf 'sets=%s\n' "$(IFS=,; echo "${SETS[*]}")"
+  echo "allow_experimental=$ALLOW_EXPERIMENTAL"
 } > "$STATE/install.txt"
 
 dpkg-query -W "${PACKAGES[@]}" 2>/dev/null > "$STATE/packages-after.txt" || true
