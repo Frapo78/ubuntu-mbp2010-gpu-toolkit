@@ -29,6 +29,7 @@
         "rfkill",
         "iw",
         "wireless-tools",
+        "wireless-regdb",
         "libinput-tools",
         "evtest",
         "xinput",
@@ -42,6 +43,16 @@
         "brightnessctl",
         "acpi",
         "upower"
+      ]
+    },
+    "bluetooth_firmware": {
+      "status": "conditional_driver",
+      "auto_install": false,
+      "packages": [
+        "bluez-firmware"
+      ],
+      "preconditions": [
+        "Install only when Bluetooth controller/boot logs indicate firmware that is provided by this package is needed."
       ]
     },
     "integration_media": {
@@ -127,6 +138,7 @@
     "full": [
       "runtime_core",
       "diagnostics",
+      "bluetooth_firmware",
       "integration_media",
       "optional_ui",
       "wifi_broadcom_sta",
