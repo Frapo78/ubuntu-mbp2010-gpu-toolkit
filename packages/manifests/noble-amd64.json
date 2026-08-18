@@ -10,6 +10,7 @@
   ],
   "sets": {
     "runtime_core": {
+      "class": "runtime",
       "status": "stable",
       "auto_install": true,
       "packages": [
@@ -19,6 +20,7 @@
       ]
     },
     "diagnostics": {
+      "class": "diagnostics",
       "status": "stable",
       "auto_install": true,
       "packages": [
@@ -46,7 +48,8 @@
       ]
     },
     "bluetooth_firmware": {
-      "status": "conditional_driver",
+      "class": "conditional_driver",
+      "status": "experimental",
       "auto_install": false,
       "packages": [
         "bluez-firmware"
@@ -56,6 +59,7 @@
       ]
     },
     "integration_media": {
+      "class": "integration",
       "status": "proven",
       "auto_install": false,
       "packages": [
@@ -71,6 +75,7 @@
       ]
     },
     "optional_ui": {
+      "class": "optional_ui",
       "status": "stable",
       "auto_install": false,
       "packages": [
@@ -79,7 +84,8 @@
       ]
     },
     "wifi_broadcom_sta": {
-      "status": "conditional_driver",
+      "class": "conditional_driver",
+      "status": "experimental",
       "auto_install": false,
       "packages": [
         "broadcom-sta-dkms",
@@ -93,7 +99,8 @@
       ]
     },
     "wifi_b43_tools": {
-      "status": "conditional_driver",
+      "class": "conditional_driver",
+      "status": "experimental",
       "auto_install": false,
       "packages": [
         "b43-fwcutter",
@@ -106,6 +113,7 @@
       ]
     },
     "apple_hotkeys_legacy": {
+      "class": "experimental_policy",
       "status": "experimental",
       "auto_install": false,
       "packages": [
@@ -116,6 +124,7 @@
       ]
     },
     "apple_fan_daemons": {
+      "class": "experimental_policy",
       "status": "experimental",
       "auto_install": false,
       "packages": [
