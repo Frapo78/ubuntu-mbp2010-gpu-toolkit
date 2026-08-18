@@ -1,0 +1,136 @@
+{
+  "schema_version": 1,
+  "suite": "noble",
+  "architecture": "amd64",
+  "reference_model": "MacBookPro6,2",
+  "notes": [
+    "Package names are resolved against the current Ubuntu 24.04 repositories when an offline bundle is built.",
+    "Kernel drivers such as bcm5974, hid_apple, applesmc, apple_gmux, btusb and uvcvideo are not replaced by these packages.",
+    "Conditional and experimental sets are never auto-installed without matching evidence."
+  ],
+  "sets": {
+    "runtime_core": {
+      "status": "stable",
+      "auto_install": true,
+      "packages": [
+        "linux-firmware",
+        "switcheroo-control",
+        "bluez"
+      ]
+    },
+    "diagnostics": {
+      "status": "stable",
+      "auto_install": true,
+      "packages": [
+        "pciutils",
+        "usbutils",
+        "inxi",
+        "kmod",
+        "rfkill",
+        "iw",
+        "wireless-tools",
+        "libinput-tools",
+        "evtest",
+        "xinput",
+        "mesa-utils",
+        "x11-xserver-utils",
+        "lm-sensors",
+        "powertop",
+        "smartmontools",
+        "alsa-utils",
+        "v4l-utils",
+        "brightnessctl",
+        "acpi",
+        "upower"
+      ]
+    },
+    "integration_media": {
+      "status": "proven",
+      "auto_install": false,
+      "packages": [
+        "udisks2",
+        "eject",
+        "asunder",
+        "lame",
+        "flac",
+        "k3b"
+      ],
+      "notes": [
+        "Optical-drive/audio workflow packages; optional for a minimal rescue bundle."
+      ]
+    },
+    "optional_ui": {
+      "status": "stable",
+      "auto_install": false,
+      "packages": [
+        "blueman",
+        "pavucontrol"
+      ]
+    },
+    "wifi_broadcom_sta": {
+      "status": "conditional_driver",
+      "auto_install": false,
+      "packages": [
+        "broadcom-sta-dkms",
+        "dkms",
+        "linux-headers-@KERNEL@"
+      ],
+      "preconditions": [
+        "Broadcom wireless controller must be identified by PCI ID.",
+        "The selected support case must require the wl/Broadcom STA path.",
+        "Do not install as a generic Broadcom fix."
+      ]
+    },
+    "wifi_b43_tools": {
+      "status": "conditional_driver",
+      "auto_install": false,
+      "packages": [
+        "b43-fwcutter",
+        "firmware-b43-installer"
+      ],
+      "offline_complete": false,
+      "notes": [
+        "firmware-b43-installer normally downloads proprietary firmware at install time.",
+        "For offline use, the bundle must contain a captured firmware/b43 payload; the offline installer will not rely on a network download."
+      ]
+    },
+    "apple_hotkeys_legacy": {
+      "status": "experimental",
+      "auto_install": false,
+      "packages": [
+        "pommed"
+      ],
+      "notes": [
+        "Ubuntu still ships pommed as an Apple laptop hotkey event handler, but modern GNOME/kernel hotkey handling must be tested first to avoid duplicate policy daemons."
+      ]
+    },
+    "apple_fan_daemons": {
+      "status": "experimental",
+      "auto_install": false,
+      "packages": [
+        "mbpfan",
+        "macfanctld"
+      ],
+      "notes": [
+        "Alternative fan-control daemons. Never install both automatically and never change thermal policy without sensor/fan verification."
+      ]
+    }
+  },
+  "bundle_profiles": {
+    "minimal": [
+      "diagnostics"
+    ],
+    "rescue": [
+      "runtime_core",
+      "diagnostics"
+    ],
+    "full": [
+      "runtime_core",
+      "diagnostics",
+      "integration_media",
+      "optional_ui",
+      "wifi_broadcom_sta",
+      "wifi_b43_tools"
+    ]
+  }
+}
