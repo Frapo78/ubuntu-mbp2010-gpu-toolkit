@@ -1,0 +1,65 @@
+{
+  "schema_version": "1.0",
+  "model": "MacBookPro6,2",
+  "marketing_name": "MacBook Pro 15-inch Mid 2010",
+  "support_level": "reference",
+  "graphics": {
+    "topology": "muxed-dual-gpu",
+    "integrated": {
+      "pci_address": "0000:00:02.0",
+      "pci_id": "8086:0046",
+      "vendor": "Intel",
+      "family": "Ironlake/Arrandale",
+      "kernel_driver": "i915",
+      "mesa_driver": "crocus",
+      "reference_boot_vga": 0
+    },
+    "discrete": {
+      "pci_address": "0000:01:00.0",
+      "pci_id": "10de:0a29",
+      "vendor": "NVIDIA",
+      "model": "GeForce GT 330M / GT216M",
+      "kernel_driver": "nouveau",
+      "reference_boot_vga": 1,
+      "audio_pci_address": "0000:01:00.1"
+    },
+    "mux": {
+      "driver": "apple_gmux",
+      "reference_version": "1.9.33",
+      "control": "vga_switcheroo"
+    }
+  },
+  "reference_software": {
+    "ubuntu": "24.04.4 LTS",
+    "kernel": "7.0.0-29-generic",
+    "display_server": "x11",
+    "opencore": "1.0.7",
+    "switcheroo_control": "2.6-2build2"
+  },
+  "stable_baseline": {
+    "wayland_enabled": false,
+    "nomodeset": false,
+    "grub_gpu_args": ["nouveau.modeset=1"],
+    "gpu_power_prefs_expected": "absent",
+    "firmware_default_gpu": "nvidia",
+    "known_duplicate_display_risk": true
+  },
+  "capabilities": {
+    "intel_accelerated": "proven",
+    "nvidia_accelerated": "proven-with-known-nouveau-errors",
+    "gmux_to_intel": "proven",
+    "intel_primary_xorg": "proven",
+    "nvidia_prime_from_intel_primary": "proven",
+    "persistent_intel_primary": "planned",
+    "nvidia_runtime_power_management": "planned",
+    "wayland_hybrid": "rejected-for-stable-baseline",
+    "gpu_power_prefs_runtime_creation": "rejected"
+  },
+  "hard_prohibitions": [
+    "nvidia-340",
+    "permanent-nomodeset",
+    "nouveau-overclock-as-fix",
+    "blind-gpu-power-prefs-retry",
+    "blind-full-efi-replacement"
+  ]
+}
