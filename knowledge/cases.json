@@ -1,0 +1,191 @@
+{
+  "schema_version": "1.0",
+  "project": "ubuntu-mbp2010-gpu-toolkit",
+  "reference_platform": {
+    "model": "MacBookPro6,2",
+    "ubuntu": "24.04.4 LTS",
+    "session": "x11",
+    "intel_pci": "0000:00:02.0",
+    "nvidia_pci": "0000:01:00.0",
+    "nvidia_audio_pci": "0000:01:00.1"
+  },
+  "status_values": ["stable", "proven", "experimental", "rejected", "planned"],
+  "cases": [
+    {
+      "id": "wayland-multigpu-freeze",
+      "title": "GNOME Wayland dual-GPU hard freeze",
+      "status": "proven",
+      "risk": "high",
+      "symptoms": [
+        "hard freeze after enabling both i915 and nouveau",
+        "desktop becomes unusable during or shortly after graphical startup"
+      ],
+      "signals": [
+        "XDG_SESSION_TYPE=wayland",
+        "i915 and nouveau both initialize",
+        "vga_switcheroo enabled",
+        "Mutter framebuffer-sharing initialization failure",
+        "Nouveau RT_LINEAR_WITH_ZETA or DATA_ERROR storm after GNOME starts"
+      ],
+      "diagnosis": "The catastrophic failure is in the Wayland multi-GPU desktop path, not proof that i915 initialization itself is broken.",
+      "safe_direction": [
+        "force GDM to X11 with WaylandEnable=false",
+        "keep both kernel drivers available",
+        "postcheck for disappearance of the Wayland-specific error path"
+      ],
+      "avoid": [
+        "permanent nomodeset",
+        "NVIDIA 340",
+        "multiple unrelated GPU changes in the same reboot"
+      ],
+      "docs": ["docs/quick-triage.md", "docs/findings.md", "docs/failed-experiments.md"]
+    },
+    {
+      "id": "duplicate-internal-lvds",
+      "title": "Single internal LCD appears twice and creates 2880x900 desktop",
+      "status": "proven",
+      "risk": "low",
+      "symptoms": [
+        "desktop logical width is 2880 on a 1440x900 panel",
+        "pointer moves into a phantom second monitor",
+        "two LVDS outputs appear connected"
+      ],
+      "signals": [
+        "xrandr shows two connected LVDS outputs",
+        "both GPUs are attached to Xorg providers"
+      ],
+      "diagnosis": "The same physical panel is exposed through both GPUs in the muxed topology.",
+      "safe_direction": [
+        "identify the duplicate output with xrandr",
+        "disable only the duplicate output for the current X11 session",
+        "prefer correct single-GPU display routing in the permanent architecture"
+      ],
+      "docs": ["docs/quick-triage.md", "docs/architecture.md"]
+    },
+    {
+      "id": "chromium-nouveau-invalid-value",
+      "title": "Chromium triggers Nouveau INVALID_VALUE errors",
+      "status": "proven",
+      "risk": "medium",
+      "symptoms": [
+        "browser causes GPU errors",
+        "high CPU in nouveau work queues",
+        "poor thermals or downclocking",
+        "possible visual artifacts"
+      ],
+      "signals": [
+        "nouveau gr: DATA_ERROR 00000004 [INVALID_VALUE]",
+        "chrome process owns NVIDIA render node",
+        "nva5_fuc084 or nva5_fuc084d firmware missing",
+        "msvld init failed"
+      ],
+      "diagnosis": "Chromium/Nouveau is a reproducible error trigger; missing NVA5 firmware also prevents Nouveau video decode initialization.",
+      "safe_direction": [
+        "correlate error timestamps with browser launch",
+        "prefer the stable renderer path while hybrid policy is being finalized",
+        "treat video-decode firmware failure separately from basic 3D acceleration"
+      ],
+      "avoid": ["NVIDIA 340", "Nouveau overclocking"],
+      "docs": ["docs/chromium.md", "docs/findings.md"]
+    },
+    {
+      "id": "intel-browser-false-negative",
+      "title": "Browser/ANGLE Intel failure incorrectly interpreted as broken i915",
+      "status": "proven",
+      "risk": "low",
+      "symptoms": [
+        "Chromium forced-Intel launch fails",
+        "ANGLE reports context initialization problems"
+      ],
+      "signals": [
+        "host glxinfo or Mesa test selects i915/Crocus",
+        "direct rendering is yes",
+        "hardware acceleration is yes",
+        "no corresponding i915 GPU hang/reset"
+      ],
+      "diagnosis": "The failure is userspace/application-path-specific; Intel hardware acceleration is healthy on the reference machine.",
+      "safe_direction": ["validate Intel with browser-independent Mesa tools before changing drivers"],
+      "docs": ["docs/findings.md", "docs/investigation-timeline.md"]
+    },
+    {
+      "id": "nvidia-default-because-boot-vga",
+      "title": "switcheroo-control marks NVIDIA as default even though Intel works",
+      "status": "proven",
+      "risk": "low",
+      "symptoms": [
+        "switcherooctl says NVIDIA Default=yes",
+        "Intel is present but not desktop default"
+      ],
+      "signals": [
+        "Intel boot_vga=0",
+        "NVIDIA boot_vga=1",
+        "switcheroo-control lists both GPUs"
+      ],
+      "diagnosis": "Default-GPU semantics follow firmware boot_vga on the reference system. This does not mean Intel or PRIME are unavailable.",
+      "safe_direction": [
+        "separate firmware default semantics from Xorg PrimaryGPU and PRIME capability",
+        "continue toward a boot-safe Intel-primary policy without assuming boot_vga can be changed"
+      ],
+      "docs": ["docs/architecture.md", "docs/resume-point.md"]
+    },
+    {
+      "id": "intel-primary-nvidia-prime",
+      "title": "Intel-primary desktop with NVIDIA render offload",
+      "status": "proven",
+      "risk": "medium",
+      "symptoms": ["desired hybrid-graphics configuration"],
+      "signals": [
+        "Xorg uses i915 as PrimaryGPU",
+        "Intel Crocus is default accelerated renderer",
+        "DRI_PRIME=pci-0000_01_00_0 selects Nouveau/NVA5",
+        "NVIDIA light 3D workload runs without new kernel faults"
+      ],
+      "diagnosis": "The target rendering architecture is technically feasible on the reference MacBookPro6,2.",
+      "safe_direction": [
+        "make display routing and Intel-primary selection boot-safe",
+        "retain explicit DRI_PRIME as the ground-truth NVIDIA offload path",
+        "test power management only after the display policy is stable"
+      ],
+      "docs": ["docs/findings.md", "docs/roadmap.md", "scripts/experimental/test-intel-primary-nvidia-offload-mbp62.sh"]
+    },
+    {
+      "id": "gpu-power-prefs-einval",
+      "title": "Apple gpu-power-prefs EFI variable creation rejected",
+      "status": "rejected",
+      "risk": "high",
+      "symptoms": ["attempt to force Intel as firmware boot GPU"],
+      "signals": [
+        "efivarfs mounted read-write",
+        "OpenCore EFI variables readable",
+        "gpu-power-prefs initially absent",
+        "correct-format creation returns EINVAL / Invalid argument"
+      ],
+      "diagnosis": "Runtime creation of gpu-power-prefs is not a reliable solution path on the reference machine.",
+      "safe_direction": ["do not retry automatically", "use Linux gmux/Xorg policy instead"],
+      "avoid": ["blind OpenCore NVRAM injection as a fallback"],
+      "docs": ["docs/failed-experiments.md", "docs/investigation-timeline.md"]
+    },
+    {
+      "id": "opencore-safe-update",
+      "title": "Safe OpenCore update on an existing OCLP-flavoured EFI",
+      "status": "proven",
+      "risk": "high",
+      "symptoms": ["OpenCore needs updating without destroying an existing bootable EFI"],
+      "signals": [
+        "existing config contains OCLP-related NVRAM markers",
+        "matching ocvalidate identifies config issues",
+        "staged files can be hash-compared before installation"
+      ],
+      "diagnosis": "A component-level staged update is safer than replacing the complete EFI tree.",
+      "safe_direction": [
+        "backup complete EFI",
+        "use matching ocvalidate.linux",
+        "stage outside ESP",
+        "validate config",
+        "update referenced components only",
+        "verify hashes and reboot before any unrelated GPU change"
+      ],
+      "docs": ["docs/opencore.md", "docs/safety.md"]
+    }
+  ]
+}
