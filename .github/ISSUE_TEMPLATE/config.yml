@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Read quick triage first
+    url: https://github.com/Frapo78/ubuntu-mbp2010-gpu-toolkit/blob/main/docs/quick-triage.md
+    about: Check whether your symptom already matches a known case before opening a new diagnostic issue.
