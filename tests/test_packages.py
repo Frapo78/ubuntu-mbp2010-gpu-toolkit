@@ -6,7 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MANIFESTS = sorted((ROOT / "packages" / "manifests").glob("*.json"))
 ALLOWED_STATUS = {"stable", "proven", "experimental", "rejected", "planned"}
 ALLOWED_CLASS = {
-    "runtime", "diagnostics", "integration", "conditional_driver",
+    "runtime", "diagnostics", "integration", "repair", "conditional_driver",
     "optional_ui", "experimental_policy"
 }
 
@@ -34,8 +34,16 @@ for path in MANIFESTS:
             assert status in {"stable", "proven"}, (
                 f"{path}:{name}: auto_install cannot be {status}"
             )
-            assert klass not in {"conditional_driver", "experimental_policy"}, (
-                f"{path}:{name}: unsafe class cannot auto-install"
+            assert klass not in {"repair", "conditional_driver", "experimental_policy"}, (
+                f"{path}:{name}: non-default class cannot auto-install"
+            )
+
+        if klass == "repair":
+            assert package_set.get("auto_install") is False, (
+                f"{path}:{name}: repair sets must be explicit"
+            )
+            assert status in {"stable", "proven"}, (
+                f"{path}:{name}: repair set must use validated packages"
             )
 
     for profile, set_names in data["bundle_profiles"].items():
