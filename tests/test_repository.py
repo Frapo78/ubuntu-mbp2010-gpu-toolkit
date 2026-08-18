@@ -8,6 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 ALLOWED_STATUS = {"stable", "proven", "experimental", "rejected", "planned"}
+ALLOWED_RISK = {"low", "medium", "high"}
 
 
 def load_json(path: Path):
@@ -31,12 +32,32 @@ def test_cases():
         assert case["status"] in ALLOWED_STATUS, (
             f"{case['id']}: unsupported status {case['status']}"
         )
-        assert case["risk"] in {"low", "medium", "high"}, (
+        assert case["risk"] in ALLOWED_RISK, (
             f"{case['id']}: invalid risk {case['risk']}"
         )
         for doc in case["docs"]:
             target = ROOT / doc
             assert target.exists(), f"{case['id']}: referenced path does not exist: {doc}"
+
+
+def test_integration_cases():
+    path = ROOT / "knowledge" / "integration-cases.json"
+    data = load_json(path)
+    assert data["schema_version"] == 1
+    cases = data["cases"]
+    assert cases, "integration-cases.json must contain cases"
+
+    ids = [case["id"] for case in cases]
+    assert len(ids) == len(set(ids)), "integration case IDs must be unique"
+
+    for case in cases:
+        for required in ("id", "title", "status", "risk", "symptoms", "evidence", "safe_direction"):
+            assert required in case, f"{case.get('id')}: missing {required}"
+        assert case["status"] in ALLOWED_STATUS
+        assert case["risk"] in ALLOWED_RISK
+        assert case["symptoms"]
+        assert case["evidence"]
+        assert case["safe_direction"]
 
 
 def test_evidence():
@@ -76,13 +97,27 @@ def test_required_docs():
         "docs/support-matrix.md",
         "docs/package-architecture.md",
         "docs/failed-experiments.md",
+        "docs/hardware-integration.md",
+        "docs/offline-rescue.md",
+        "packages/README.md",
+        "packages/manifests/noble-amd64.json",
+        "scripts/integration-probe.sh",
+        "scripts/offline/prepare-bundle.sh",
+        "scripts/offline/verify-bundle.sh",
+        "scripts/offline/install-bundle.sh",
     ]
     for item in required:
         assert (ROOT / item).exists(), f"required repository entrypoint missing: {item}"
 
 
 def main():
-    tests = [test_cases, test_evidence, test_profiles, test_required_docs]
+    tests = [
+        test_cases,
+        test_integration_cases,
+        test_evidence,
+        test_profiles,
+        test_required_docs,
+    ]
     failures = []
     for test in tests:
         try:
