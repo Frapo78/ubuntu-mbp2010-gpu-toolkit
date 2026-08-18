@@ -1,0 +1,6 @@
+*.log
+*.txt
+reports/
+private/
+.env
+.DS_Store
