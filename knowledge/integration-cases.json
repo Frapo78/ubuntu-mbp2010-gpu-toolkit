@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "scope": "MacBook Pro Ubuntu hardware integration beyond graphics",
+  "cases": [
+    {
+      "id": "I001",
+      "title": "Apple multitouch trackpad missing or misclassified",
+      "status": "proven",
+      "risk": "low",
+      "symptoms": ["trackpad missing", "no gestures", "wrong pointer device", "click/tap behavior incorrect"],
+      "evidence": [
+        "Check whether bcm5974 is loaded/bound.",
+        "Inspect /proc/bus/input/devices and libinput list-devices.",
+        "Separate physical click failure from software tap/gesture configuration."
+      ],
+      "safe_direction": [
+        "Use scripts/integration-probe.sh.",
+        "Use libinput-tools/evtest/xinput for diagnosis.",
+        "Do not install a third-party touchpad kernel driver before proving bcm5974 is absent or unsupported."
+      ]
+    },
+    {
+      "id": "I002",
+      "title": "Keyboard backlight unavailable or brightness keys ineffective",
+      "status": "planned",
+      "risk": "low",
+      "symptoms": ["keyboard backlight missing", "keyboard brightness keys do nothing"],
+      "evidence": [
+        "Enumerate /sys/class/leds/*kbd_backlight.",
+        "Check applesmc and hid_apple state.",
+        "Check whether GNOME sees the relevant key events."
+      ],
+      "safe_direction": [
+        "If a kbd_backlight LED endpoint exists, test through brightnessctl before adding daemons.",
+        "Do not install pommed merely because a key binding is missing."
+      ]
+    },
+    {
+      "id": "I003",
+      "title": "Broadcom Wi-Fi unavailable after installation",
+      "status": "experimental",
+      "risk": "medium",
+      "symptoms": ["no Wi-Fi interface", "Broadcom controller present but network unavailable", "firmware/module errors"],
+      "evidence": [
+        "Capture exact Broadcom PCI ID and current driver from lspci -nnk.",
+        "Inspect rfkill, iw and current-boot kernel firmware/module errors.",
+        "Determine whether the existing path is wl/Broadcom STA or b43 before changing packages."
+      ],
+      "safe_direction": [
+        "Keep both driver package families available in a full offline bundle.",
+        "Install only the classified path.",
+        "Broadcom STA requires DKMS and matching kernel headers.",
+        "b43 offline repair requires a captured firmware/b43 payload; the installer package alone is not network-independent."
+      ],
+      "avoid": ["installing wl and b43 paths blindly", "assuming all Broadcom PCI IDs use the same driver"]
+    },
+    {
+      "id": "I004",
+      "title": "Bluetooth controller unavailable or blocked",
+      "status": "planned",
+      "risk": "low",
+      "symptoms": ["Bluetooth toggle missing", "no controller in bluetoothctl", "Bluetooth blocked"],
+      "evidence": [
+        "Identify USB Bluetooth controller.",
+        "Check btusb binding and rfkill state.",
+        "Check bluetooth.service and kernel firmware errors."
+      ],
+      "safe_direction": [
+        "Ensure BlueZ runtime is present.",
+        "Use bluez-firmware only when logs/controller identity justify it.",
+        "Blueman is optional UI, not a driver fix."
+      ]
+    },
+    {
+      "id": "I005",
+      "title": "Apple function/media keys behave incorrectly",
+      "status": "planned",
+      "risk": "low",
+      "symptoms": ["media keys swapped", "function keys unexpected", "brightness/volume keys ineffective"],
+      "evidence": [
+        "Inspect hid_apple parameters and actual input events.",
+        "Check GNOME media-key handling before installing another daemon."
+      ],
+      "safe_direction": [
+        "Prefer kernel/module parameter or desktop configuration once the event path is understood.",
+        "Treat pommed as experimental legacy tooling, not a default package."
+      ]
+    },
+    {
+      "id": "I006",
+      "title": "High temperature or fan behavior concern",
+      "status": "planned",
+      "risk": "medium",
+      "symptoms": ["high temperature", "fans do not ramp", "fans always loud", "thermal throttling"],
+      "evidence": [
+        "Collect lm-sensors output and applesmc/fan sysfs state.",
+        "Correlate temperature with CPU/GPU load and kernel throttling logs."
+      ],
+      "safe_direction": [
+        "Diagnose first with lm-sensors/powertop.",
+        "Do not install or enable multiple fan daemons.",
+        "mbpfan/macfanctld remain experimental until model-specific thermal validation is complete."
+      ]
+    },
+    {
+      "id": "I007",
+      "title": "Audio, camera or optical device missing",
+      "status": "proven",
+      "risk": "low",
+      "symptoms": ["no sound device", "camera missing", "optical drive not visible"],
+      "evidence": [
+        "Use ALSA device enumeration for audio.",
+        "Use USB/video enumeration and v4l-utils for camera.",
+        "Use lsblk/udev and /dev/sr* for optical drive."
+      ],
+      "safe_direction": [
+        "Separate kernel device detection from desktop/application routing.",
+        "Install diagnostic utilities before changing drivers."
+      ]
+    }
+  ]
+}
