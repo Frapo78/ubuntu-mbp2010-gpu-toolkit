@@ -1,0 +1,89 @@
+{
+  "schema_version": "1.0",
+  "policy": "This ledger records conclusions from the reference investigation without publishing raw private machine logs. Reproduce with repository diagnostics before generalizing to another model.",
+  "reference_machine": "MacBookPro6,2",
+  "evidence": [
+    {
+      "id": "E001",
+      "claim": "GNOME Wayland multi-GPU is a catastrophic freeze trigger on the reference machine",
+      "status": "proven",
+      "source_artifact": "forensics-freeze-i915-mbp62-20260818-230923.txt",
+      "key_signals": [
+        "i915 and nouveau initialize before failure",
+        "vga_switcheroo enabled",
+        "Mutter accelerated iGPU/dGPU framebuffer sharing fails",
+        "Nouveau RT_LINEAR_WITH_ZETA / DATA_ERROR storm follows"
+      ]
+    },
+    {
+      "id": "E002",
+      "claim": "X11 dual-GPU avoids the specific Wayland freeze path",
+      "status": "proven",
+      "source_artifact": "test-dualgpu-xorg-mbp62.sh and post-test report",
+      "key_signals": ["both GPUs active", "no Wayland RT_LINEAR path", "no i915 hang/reset"]
+    },
+    {
+      "id": "E003",
+      "claim": "Intel i915/Crocus direct hardware acceleration works",
+      "status": "proven",
+      "source_artifact": "test-mesa-intel-host-v2.sh report",
+      "key_signals": ["DRI_PRIME selects Intel render node", "direct rendering yes", "accelerated yes", "Crocus renderer"]
+    },
+    {
+      "id": "E004",
+      "claim": "Apple gmux can route the internal panel to Intel",
+      "status": "proven",
+      "source_artifact": "test-gmux-migd-mbp62.sh report",
+      "key_signals": ["MIGD succeeds", "panel remains usable", "automatic return to discrete path succeeds"]
+    },
+    {
+      "id": "E005",
+      "claim": "Intel-primary Xorg is fluid and usable",
+      "status": "proven",
+      "source_artifact": "test-intel-primary-xorg-mbp62.sh report",
+      "key_signals": ["i915 PrimaryGPU", "Crocus glamor/AIGLX", "1440x900 internal display"]
+    },
+    {
+      "id": "E006",
+      "claim": "NVIDIA PRIME render offload works while Intel is Xorg primary",
+      "status": "proven",
+      "source_artifact": "test-intel-primary-nvidia-offload-mbp62-20260819-000843.txt",
+      "key_signals": ["Intel default accelerated", "DRI_PRIME=pci-0000_01_00_0 selects NVA5", "NVIDIA light stress produces no new GPU faults"]
+    },
+    {
+      "id": "E007",
+      "claim": "Firmware/default semantics currently mark NVIDIA as boot/default GPU",
+      "status": "proven",
+      "source_artifact": "preflight-efi-gpu-default-mbp62-20260819-001544.txt and switcheroo probe",
+      "key_signals": ["Intel boot_vga=0", "NVIDIA boot_vga=1", "switcheroo-control NVIDIA Default=yes"]
+    },
+    {
+      "id": "E008",
+      "claim": "OpenCore 1.0.7 boots successfully with validated reference config",
+      "status": "proven",
+      "source_artifact": "postcheck-opencore107-gpu-boot-mbp62-20260819-004145.txt",
+      "key_signals": ["opencore-version REL-107-2026-03-20", "live hashes match staging", "matching ocvalidate passes"]
+    },
+    {
+      "id": "E009",
+      "claim": "Correct-format runtime creation of gpu-power-prefs is rejected on the reference machine",
+      "status": "proven-negative",
+      "source_artifact": "test-efi-gpu-power-prefs-igd-once-v4-20260819-005318.txt",
+      "key_signals": ["efivarfs rw", "gpu-power-prefs absent before test", "8-byte attributes+DWORD write returns Invalid argument", "variable remains absent"]
+    },
+    {
+      "id": "E010",
+      "claim": "Nouveau INVALID_VALUE errors correlate with Chromium launch rather than initial GNOME login glitch",
+      "status": "proven",
+      "source_artifact": "postcheck-opencore107-gpu-boot-mbp62-20260819-004145.txt",
+      "key_signals": ["GNOME starts earlier", "Chromium later owns NVIDIA render node", "DATA_ERROR timestamps begin after Chromium launch"]
+    },
+    {
+      "id": "E011",
+      "claim": "Reference stable checkpoint contains no gpu-power-prefs and no experimental persistent Xorg GPU override",
+      "status": "proven",
+      "source_artifact": "freeze-stable-mbp62-20260819-010544.txt",
+      "key_signals": ["gpu-power-prefs absent", "test Xorg configs absent", "WaylandEnable=false", "OpenCore 1.0.7", "duplicate LVDS disabled session-only"]
+    }
+  ]
+}
