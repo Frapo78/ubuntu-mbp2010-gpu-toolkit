@@ -1,34 +1,49 @@
-# Ubuntu MacBook Pro 2010 Compatibility & GPU Toolkit
+# Ubuntu MacBook Pro 2010 Compatibility, Recovery & Hybrid-GPU Toolkit
 
-A reproducible troubleshooting, recovery and compatibility toolkit for running modern Ubuntu on the **MacBook Pro 15-inch Mid 2010 (`MacBookPro6,2`)**, with a primary focus on its unusual muxed dual-GPU architecture:
+A reproducible troubleshooting, recovery and compatibility toolkit for running modern Ubuntu on the **MacBook Pro 15-inch Mid 2010 (`MacBookPro6,2`)**.
 
-- Intel Ironlake / Arrandale integrated graphics (`i915`, Mesa Crocus)
-- NVIDIA GeForce GT 330M / GT216M (`nouveau`)
-- Apple `gmux`
-- `vga_switcheroo`
-- `switcheroo-control`
-- OpenCore as boot manager
+The project began with a difficult dual-GPU investigation and is being turned into a package that can help **humans and troubleshooting agents** diagnose, recover, fix and stabilize similar installations as quickly and safely as possible.
 
-The project grew from a real Ubuntu 24.04 troubleshooting session and is being converted into a structured package that can help **humans and troubleshooting agents** diagnose, recover, fix and eventually automate similar installations.
+It now covers two connected goals:
 
-> **Status: early alpha / active engineering.** Diagnostics and several core findings are already useful. The final automatic hybrid-GPU configuration is not yet declared stable.
+1. **Hybrid graphics** — Intel i915/Crocus for normal desktop use, NVIDIA GT 330M/Nouveau on demand, Apple gmux, PRIME, `vga_switcheroo`, `switcheroo-control` and OpenCore.
+2. **Whole-Mac Ubuntu integration** — trackpad, Apple keyboard/function keys, keyboard/display backlight, Broadcom Wi-Fi, Bluetooth, audio, camera, battery, SMC sensors/fans, storage and optical media.
 
-## What this project is trying to become
+> **Status: early alpha / active engineering.** The diagnostic framework, offline package architecture and several core findings are useful now. The final automatic hybrid-GPU configuration is not yet declared stable.
 
-The end goal is a package that can safely move a compatible installation through:
+---
+
+# Project goal
+
+The target workflow is:
 
 ```text
-DETECT -> DIAGNOSE -> CLASSIFY -> CHECKPOINT -> FIX -> REBOOT -> POSTCHECK
+DETECT
+  ↓
+DIAGNOSE
+  ↓
+CLASSIFY
+  ↓
+CHECKPOINT
+  ↓
+FIX
+  ↓
+REBOOT (only when needed)
+  ↓
+POSTCHECK
+  ↓
+PROMOTE EVIDENCE INTO THE REPOSITORY
 ```
 
-and ultimately provide a Linux experience close to macOS hybrid graphics:
+The final user experience should be close to the good parts of macOS hardware integration while staying transparent and Linux-native:
 
-1. **Intel by default** for desktop, browser and normal workloads.
-2. **NVIDIA on demand** for workloads that benefit from the discrete GPU.
-3. GNOME-friendly dedicated-GPU launching or a small explicit GUI if native semantics are insufficient.
-4. Automatic dGPU power saving where Linux and the hardware actually support it.
-5. Recovery checkpoints and rollback as first-class features.
-6. No unsupported legacy-driver hacks.
+- Intel as the normal low-power desktop/rendering path;
+- NVIDIA available for explicit or GUI-driven on-demand rendering;
+- automatic dGPU power saving where the kernel/hardware actually allow it;
+- working MacBook input/backlight/connectivity/platform hardware;
+- offline recovery from USB when Wi-Fi or the graphical stack is broken;
+- checkpoints and rollback before risky changes;
+- no unsupported legacy-driver shortcuts.
 
 See [`docs/project-charter.md`](docs/project-charter.md) and [`docs/package-architecture.md`](docs/package-architecture.md).
 
@@ -36,46 +51,193 @@ See [`docs/project-charter.md`](docs/project-charter.md) and [`docs/package-arch
 
 # Start here
 
-## I am a human with a problem
+## Human — Ubuntu boots and the problem is unknown
 
-If Ubuntu is usable, start with the non-destructive classifier:
+Run the non-destructive triage:
 
 ```bash
 chmod +x scripts/quick-triage.sh
 ./scripts/quick-triage.sh
 ```
 
-Then collect a fuller report:
+Graphics/system diagnostics:
 
 ```bash
 chmod +x scripts/collect-diagnostics.sh
 ./scripts/collect-diagnostics.sh
 ```
 
-Read:
+Whole-Mac integration diagnostics:
+
+```bash
+chmod +x scripts/integration-probe.sh
+./scripts/integration-probe.sh
+```
+
+Then read:
 
 1. [`docs/quick-triage.md`](docs/quick-triage.md)
 2. [`docs/decision-tree.md`](docs/decision-tree.md)
 3. [`docs/runbook.md`](docs/runbook.md)
+4. [`knowledge/cases.json`](knowledge/cases.json)
+5. [`knowledge/integration-cases.json`](knowledge/integration-cases.json)
 
-If the problem is still unknown, open a **Diagnostic / compatibility problem** issue. The issue form asks for the evidence maintainers need instead of forcing a long question-and-answer cycle.
+## Human — the Mac has no working Internet connection
 
-## I am an AI/troubleshooting agent
+Use a USB rescue bundle prepared earlier on an Ubuntu 24.04 amd64 machine with network access.
+
+On the online builder:
+
+```bash
+./scripts/offline/prepare-bundle.sh \
+  --profile rescue \
+  --output /media/$USER/USB/mbp-rescue
+```
+
+For a larger kit including conditional Wi-Fi driver packages:
+
+```bash
+./scripts/offline/prepare-bundle.sh \
+  --profile full \
+  --kernel "$(uname -r)" \
+  --output /media/$USER/USB/mbp-rescue-full
+```
+
+On the offline Mac:
+
+```bash
+./scripts/offline/verify-bundle.sh /path/to/mbp-rescue
+./scripts/offline/install-bundle.sh /path/to/mbp-rescue --dry-run
+./scripts/offline/install-bundle.sh /path/to/mbp-rescue
+```
+
+The default installer applies only package sets explicitly marked safe for automatic installation.
+
+**Conditional driver packages can be present on the USB without being installed.** Broadcom Wi-Fi or Bluetooth firmware packages require hardware classification and explicit selection.
+
+See [`docs/offline-rescue.md`](docs/offline-rescue.md) and [`packages/README.md`](packages/README.md).
+
+## AI / troubleshooting agent
 
 Read [`AGENTS.md`](AGENTS.md) first.
 
-Then use:
+Machine-readable sources:
 
-- [`profiles/MacBookPro6,2.json`](profiles/MacBookPro6,2.json) — machine-readable hardware/reference profile
-- [`knowledge/cases.json`](knowledge/cases.json) — symptom/evidence/diagnosis/action knowledge base
-- [`knowledge/evidence.json`](knowledge/evidence.json) — ledger of reproduced conclusions
-- [`docs/status-model.md`](docs/status-model.md) — stable/proven/experimental/rejected/planned semantics
+- [`profiles/MacBookPro6,2.json`](profiles/MacBookPro6,2.json)
+- [`knowledge/cases.json`](knowledge/cases.json)
+- [`knowledge/integration-cases.json`](knowledge/integration-cases.json)
+- [`knowledge/evidence.json`](knowledge/evidence.json)
+- [`packages/manifests/noble-amd64.json`](packages/manifests/noble-amd64.json)
+- [`docs/status-model.md`](docs/status-model.md)
 
-Agents should **classify before modifying**, prefer machine evidence over assumptions, and update reusable repository knowledge when a troubleshooting cycle produces a new finding.
+Agents must **classify before modifying** and must not confuse “package available in the USB bundle” with “package is the correct fix for this hardware.”
 
 ---
 
-# Current proven baseline
+# Offline package system
+
+Binary `.deb` files are intentionally not committed to Git.
+
+Instead the repository contains a versioned package manifest and scripts that generate a self-contained local APT repository for a USB drive.
+
+Benefits:
+
+- packages come from Ubuntu repositories at bundle-build time;
+- exact versions and SHA-256 hashes are recorded;
+- DKMS/header packages can target the correct kernel;
+- Git does not contain hundreds of MB of stale binaries;
+- generated USB bundles can later become GitHub Release artifacts once the format is stable.
+
+Current Ubuntu reference manifest:
+
+```text
+packages/manifests/noble-amd64.json
+```
+
+Main package groups include:
+
+### Stable runtime / diagnostics
+
+Examples:
+
+- `linux-firmware`
+- `switcheroo-control`
+- `bluez`
+- `pciutils`, `usbutils`, `inxi`
+- `rfkill`, `iw`, `wireless-tools`, `wireless-regdb`
+- `libinput-tools`, `evtest`, `xinput`
+- `mesa-utils`, `x11-xserver-utils`
+- `lm-sensors`, `powertop`
+- `smartmontools`
+- `alsa-utils`, `v4l-utils`
+- `brightnessctl`
+- `acpi`, `upower`
+
+### Conditional packages
+
+Present in a full rescue bundle but **never blindly applied**:
+
+- Broadcom STA: `broadcom-sta-dkms`, `dkms`, matching kernel headers;
+- b43 tooling: `b43-fwcutter`, `firmware-b43-installer` package payload;
+- `bluez-firmware` when controller/log evidence requires it.
+
+### Optional integration/UI
+
+- `blueman`
+- `pavucontrol`
+- optical/audio tools such as `asunder`, `lame`, `flac`, `k3b`
+
+### Experimental Apple policy daemons
+
+Available in Ubuntu but **not automatically installed by this project**:
+
+- `pommed`
+- `mbpfan`
+- `macfanctld`
+
+These can duplicate modern desktop/hardware policy or alter thermal behavior and therefore require model-specific evidence.
+
+---
+
+# Whole-Mac integration scope
+
+## Trackpad
+
+The Apple multitouch trackpad is normally handled by the kernel `bcm5974` driver and libinput.
+
+The toolkit checks device detection, events, libinput classification and X11/GNOME configuration before proposing changes.
+
+## Keyboard and keyboard backlight
+
+The toolkit checks Apple HID state, `hid_apple` parameters, actual key events, SMC/platform state and `/sys/class/leds/*kbd_backlight` endpoints.
+
+`brightnessctl` is a control utility; it cannot create a missing kernel LED endpoint.
+
+## Wi-Fi
+
+Broadcom Wi-Fi is always classified by exact PCI ID and current driver/firmware state.
+
+The project explicitly avoids the common “install every Broadcom driver until something works” pattern.
+
+## Bluetooth
+
+The normal path is the kernel USB Bluetooth stack plus BlueZ. Firmware packages are conditional on controller identity and logs.
+
+## Audio / camera / optical drive
+
+The toolkit separates kernel device detection from desktop/application routing using ALSA, V4L2, udev/lsblk and related tools.
+
+## Battery / power / thermal
+
+The toolkit reports battery health, power state, sensors and Apple SMC/fan exposure before changing policy.
+
+Fan-control daemons remain experimental until the reference model has been explicitly validated.
+
+See [`docs/hardware-integration.md`](docs/hardware-integration.md).
+
+---
+
+# Current graphics baseline
 
 Reference machine:
 
@@ -84,12 +246,10 @@ Reference machine:
 - X11 session
 - Linux 7.0 Ubuntu kernel
 - OpenCore 1.0.7
-- Intel `i915` + Crocus
-- NVIDIA `nouveau`
+- Intel `i915` + Mesa Crocus
+- NVIDIA GT 330M + `nouveau`
 - classic `apple_gmux`
 - `switcheroo-control` 2.6
-
-See the exact scope in [`docs/support-matrix.md`](docs/support-matrix.md).
 
 ## Proven working
 
@@ -101,129 +261,149 @@ See the exact scope in [`docs/support-matrix.md`](docs/support-matrix.md).
 - NVIDIA PRIME render offload works while Intel is primary.
 - OpenCore 1.0.7 boots Ubuntu successfully after a staged/validated upgrade.
 
-The most important result is that the desired rendering architecture — **Intel primary + NVIDIA on demand** — has already been demonstrated. The remaining engineering work is persistence, boot ordering, GNOME policy and dGPU power management.
+The desired rendering architecture — **Intel primary + NVIDIA on demand** — has therefore already been demonstrated temporarily. Remaining work is persistence, boot ordering, GNOME policy and dGPU power management.
 
-## Known problematic paths
+## Known problematic/rejected paths
 
 - GNOME Wayland + this dual-GPU topology can hard-freeze the reference machine.
-- Nouveau on the GT 330M can emit `DATA_ERROR [INVALID_VALUE]`, notably with Chromium.
-- Nouveau video-decode firmware `nva5_fuc084*` is missing in the tested standard setup.
-- NVIDIA-primary Xorg can expose the same internal panel twice and create a false `2880x900` desktop.
-- `switcheroo-control` follows the firmware `boot_vga` state and currently calls NVIDIA the default GPU.
-- Runtime creation of Apple's `gpu-power-prefs` EFI variable is rejected with `EINVAL` on the reference machine.
+- Nouveau can emit `DATA_ERROR [INVALID_VALUE]`, notably with Chromium.
+- Nouveau video decode lacks the tested NVA5 firmware path.
+- NVIDIA-primary Xorg can expose the internal panel twice, producing a false `2880x900` desktop.
+- firmware `boot_vga` still makes `switcheroo-control` call NVIDIA the default GPU.
+- runtime creation of Apple's `gpu-power-prefs` EFI variable is rejected with `EINVAL` on the reference machine.
+- NVIDIA 340 is not a supported solution for this modern Ubuntu stack.
 
 See [`docs/findings.md`](docs/findings.md) and [`docs/failed-experiments.md`](docs/failed-experiments.md).
 
 ---
 
-# Hard safety rules
+# Safety model
 
-Do **not** treat these as fixes for the reference Mac on modern Ubuntu:
-
-- NVIDIA 340
-- permanent `nomodeset`
-- Nouveau clock increases/overclocking
-- blind retry loops for `gpu-power-prefs`
-- Wayland multi-GPU as the stable baseline
-- blind replacement of the complete existing OpenCore/OCLP EFI tree
-
-Do not change gmux while graphical/DRM/audio clients still hold the affected devices unless a reviewed experiment explicitly handles those holders.
-
-Read [`docs/safety.md`](docs/safety.md) before experimental work.
-
----
-
-# Repository map
-
-## Human and agent entrypoints
-
-- [`AGENTS.md`](AGENTS.md) — mandatory protocol for troubleshooting agents
-- [`docs/quick-triage.md`](docs/quick-triage.md) — symptom-first diagnosis
-- [`docs/decision-tree.md`](docs/decision-tree.md) — minimal-risk diagnostic branching
-- [`docs/runbook.md`](docs/runbook.md) — full diagnose/fix/postcheck workflow
-- [`docs/reporting.md`](docs/reporting.md) — evidence capture and public-log redaction
-
-## Architecture and evidence
-
-- [`docs/architecture.md`](docs/architecture.md) — graphics stack and topology
-- [`docs/findings.md`](docs/findings.md) — evidence-backed conclusions
-- [`docs/investigation-timeline.md`](docs/investigation-timeline.md) — complete engineering chronology
-- [`knowledge/evidence.json`](knowledge/evidence.json) — machine-readable evidence ledger
-- [`docs/reference-checkpoint.md`](docs/reference-checkpoint.md) — last known-good reference state
-
-## Compatibility and support
-
-- [`docs/support-matrix.md`](docs/support-matrix.md) — what hardware/software is actually covered
-- [`profiles/MacBookPro6,2.json`](profiles/MacBookPro6,2.json) — reference hardware profile
-- [`docs/system-baseline.md`](docs/system-baseline.md) — non-GPU Ubuntu findings from the reference machine
-
-## Safety and rejected paths
-
-- [`docs/status-model.md`](docs/status-model.md) — maturity definitions
-- [`docs/safety.md`](docs/safety.md) — safety rules
-- [`SECURITY.md`](SECURITY.md) — recovery expectations
-- [`docs/failed-experiments.md`](docs/failed-experiments.md) — tested/researched approaches that should not be repeated
-- [`docs/opencore.md`](docs/opencore.md) — staged OpenCore update methodology
-
-## Development direction
-
-- [`docs/project-charter.md`](docs/project-charter.md) — mission and final goal
-- [`docs/package-architecture.md`](docs/package-architecture.md) — target toolkit/CLI/action architecture
-- [`docs/roadmap.md`](docs/roadmap.md) — implementation phases
-- [`docs/resume-point.md`](docs/resume-point.md) — exact next engineering step
-
-## Scripts
-
-Stable/conservative:
-
-- `scripts/quick-triage.sh`
-- `scripts/collect-diagnostics.sh`
-- `scripts/stabilize-known-good.sh`
-
-Research-grade / explicit review required:
-
-- `scripts/experimental/test-gmux-migd-mbp62.sh`
-- `scripts/experimental/test-intel-primary-nvidia-offload-mbp62.sh`
-
----
-
-# How fixes graduate
-
-The repository uses a strict maturity sequence:
+Every recommendation uses the maturity model:
 
 ```text
 planned -> experimental -> proven -> stable
 ```
 
-Any path can become `rejected` when evidence shows it is unsafe, unsupported or unproductive.
+Any path may become:
 
-A fix is not `stable` simply because it worked once. Persistence, rollback, reboot behaviour and postchecks must also be demonstrated.
+```text
+rejected
+```
+
+A fix is not stable merely because it worked once.
+
+Persistent actions require:
+
+1. applicability check;
+2. checkpoint;
+3. rollback prepared first;
+4. one independent modification at a time;
+5. immediate verification;
+6. reboot only when required;
+7. postcheck before continuing.
+
+Hard rules for the reference platform include:
+
+- no NVIDIA 340;
+- no permanent `nomodeset`;
+- no Nouveau clock increases/overclocking;
+- no automated retry loop for `gpu-power-prefs`;
+- no Wayland multi-GPU stable baseline yet;
+- no blind replacement of an OpenCore/OCLP EFI tree;
+- no blind dual installation of Broadcom STA and b43;
+- no automatic `pommed`, `mbpfan` or `macfanctld` policy changes;
+- no gmux changes while graphical/DRM/audio clients hold affected devices unless the reviewed experiment explicitly handles them.
+
+Read [`docs/safety.md`](docs/safety.md) and [`SECURITY.md`](SECURITY.md).
 
 ---
 
-# Current next goal
+# Repository map
 
-Do **not** revisit the already rejected EFI route.
+## Human / agent entrypoints
 
-The next engineering target is a **reversible, early-boot Intel display-routing + Intel-primary Xorg configuration** that:
+- `README.md`
+- `AGENTS.md`
+- `docs/quick-triage.md`
+- `docs/decision-tree.md`
+- `docs/runbook.md`
+- `docs/reporting.md`
+
+## Machine-readable knowledge
+
+- `knowledge/cases.json`
+- `knowledge/integration-cases.json`
+- `knowledge/evidence.json`
+- `profiles/MacBookPro6,2.json`
+- `packages/manifests/noble-amd64.json`
+
+## Offline rescue
+
+- `docs/offline-rescue.md`
+- `packages/README.md`
+- `scripts/offline/prepare-bundle.sh`
+- `scripts/offline/verify-bundle.sh`
+- `scripts/offline/install-bundle.sh`
+
+## Whole-Mac integration
+
+- `docs/hardware-integration.md`
+- `scripts/integration-probe.sh`
+
+## Graphics / OpenCore engineering
+
+- `docs/architecture.md`
+- `docs/findings.md`
+- `docs/opencore.md`
+- `docs/investigation-timeline.md`
+- `docs/reference-checkpoint.md`
+- `docs/resume-point.md`
+- `scripts/experimental/`
+
+## Development / governance
+
+- `docs/project-charter.md`
+- `docs/package-architecture.md`
+- `docs/status-model.md`
+- `docs/roadmap.md`
+- `CONTRIBUTING.md`
+- `.github/workflows/validate.yml`
+- `tests/`
+
+---
+
+# Current next engineering goal
+
+The primary GPU task remains a **reversible early-boot Intel display-routing + Intel-primary Xorg configuration** that:
 
 - runs before GDM/Xorg clients acquire both GPUs;
 - routes the internal panel to Intel safely;
 - starts the desktop on Intel i915/Crocus;
 - keeps NVIDIA/Nouveau available for explicit PRIME rendering;
 - avoids the duplicate LVDS layout;
-- can be rolled back automatically;
-- is followed by a full postcheck.
+- has rollback and postcheck built in.
 
-After that is proven, the project can tackle NVIDIA runtime suspend/resume and final GNOME/GUI automation.
+In parallel, the compatibility layer will continue turning validated trackpad, Wi-Fi, Bluetooth, keyboard/backlight, thermal, audio, camera and storage findings into model-gated actions and offline rescue package sets.
 
 ---
 
 # Contributing
 
-Use the structured diagnostic issue form and attach a redacted report. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+Use the structured diagnostic issue form and attach redacted reports.
 
-When contributing a fix, include its maturity status, supported hardware profile, preconditions, touched state, rollback and postcheck.
+When contributing a fix, include:
+
+- supported model/profile;
+- maturity status;
+- evidence/preconditions;
+- packages required;
+- offline availability;
+- state touched;
+- rollback;
+- postcheck.
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## License
 
