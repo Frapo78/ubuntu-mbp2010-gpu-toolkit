@@ -36,6 +36,7 @@ On the offline Mac:
 
 ```bash
 ./scripts/offline/verify-bundle.sh /path/to/mbp-rescue
+./scripts/offline/install-bundle.sh /path/to/mbp-rescue --dry-run
 ./scripts/offline/install-bundle.sh /path/to/mbp-rescue
 ```
 
@@ -48,8 +49,10 @@ mbp-rescue/
 ├── BUNDLE.json
 ├── SHA256SUMS
 ├── requested-packages.txt
+├── resolved-packages.txt
 ├── package-sets.json
 ├── debs/
+│   ├── Packages
 │   ├── Packages.gz
 │   └── *.deb
 ├── firmware/
@@ -74,7 +77,40 @@ Adds stable runtime/core packages such as the firmware baseline and dual-GPU ser
 
 ### `full`
 
-Downloads all non-experimental package sets, including conditional Wi-Fi driver packages. **Presence in the USB bundle does not mean automatic installation.** Conditional drivers remain gated by hardware classification.
+Downloads the broad recovery inventory:
+
+- stable runtime and diagnostics;
+- explicit repair sets for networking, X11/libinput input and PipeWire/WirePlumber audio;
+- optional integration/UI packages;
+- conditional Broadcom and Bluetooth firmware/driver packages.
+
+**Presence in the USB bundle does not mean automatic installation.**
+
+The normal installer still auto-selects only sets marked `auto_install=true`. Repair sets require an explicit `--set`. Experimental conditional-driver sets require both an explicit `--set` and `--allow-experimental` after the hardware has been classified.
+
+Examples:
+
+```bash
+# Reinstall normal Ubuntu networking userspace from USB
+./scripts/offline/install-bundle.sh /path/to/full \
+  --set network_stack_repair
+
+# Reinstall the X11 libinput driver
+./scripts/offline/install-bundle.sh /path/to/full \
+  --set x11_input_stack_repair
+
+# Reinstall the PipeWire/WirePlumber desktop audio stack
+./scripts/offline/install-bundle.sh /path/to/full \
+  --set audio_stack_repair
+```
+
+Conditional driver example — only after classification:
+
+```bash
+./scripts/offline/install-bundle.sh /path/to/full \
+  --set wifi_broadcom_sta \
+  --allow-experimental
+```
 
 ## Broadcom Wi-Fi
 
@@ -108,9 +144,10 @@ Offline installation follows the same safety contract as online actions:
 2. verify Ubuntu codename and architecture;
 3. inspect DMI model and hardware topology;
 4. install stable diagnostic/runtime sets first;
-5. never install conditional driver sets merely because they are present;
-6. checkpoint relevant configuration before driver/policy changes;
-7. postcheck the affected subsystem.
+5. do not reinstall a repair set unless the corresponding userspace stack actually needs repair;
+6. never install conditional driver sets merely because they are present;
+7. checkpoint relevant configuration before driver/policy changes;
+8. postcheck the affected subsystem.
 
 ## Future release artifacts
 
