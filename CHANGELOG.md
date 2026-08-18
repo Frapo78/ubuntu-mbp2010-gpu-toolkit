@@ -4,13 +4,42 @@ This project is pre-release. Entries track repository/toolkit maturity rather th
 
 ## Unreleased
 
+### Added
+
+- whole-Mac integration scope beyond graphics: trackpad, keyboard/function keys, keyboard/display backlight, Wi-Fi, Bluetooth, audio, camera, battery/power, Apple SMC/fans, storage and optical drive;
+- `scripts/integration-probe.sh` read-only integration report;
+- `knowledge/integration-cases.json` machine-readable non-GPU troubleshooting cases;
+- `docs/hardware-integration.md` subsystem guidance and package/driver boundaries;
+- versioned Ubuntu 24.04 amd64 package manifest under `packages/manifests/`;
+- offline USB rescue architecture and documentation;
+- `scripts/offline/prepare-bundle.sh` online bundle builder;
+- `scripts/offline/verify-bundle.sh` checksum/metadata verification;
+- `scripts/offline/install-bundle.sh` temporary local-APT installer with conditional-driver gates;
+- package-manifest CI validation;
+- P0 offline-bundle validation issue;
+- P0 reference non-GPU hardware inventory issue;
+- P1 whole-Mac integration issue.
+
+### Safety / architecture decisions
+
+- raw `.deb` binaries are not committed to Git; generated USB bundles carry exact packages, dependency closure, metadata and SHA-256 sums;
+- packages are separated by purpose (`runtime`, `diagnostics`, `conditional_driver`, etc.) and maturity (`stable`, `proven`, `experimental`, `rejected`, `planned`);
+- conditional Broadcom/Bluetooth driver packages may be present in a full bundle without being automatically installed;
+- experimental conditional drivers require explicit selection and `--allow-experimental`;
+- Broadcom STA offline installation requires matching kernel headers;
+- b43 offline repair is not considered complete unless a usable firmware payload has been captured separately; the project does not treat `firmware-b43-installer` alone as network-independent;
+- `pommed`, `mbpfan` and `macfanctld` remain experimental policy tools, never default automatic integration packages.
+
 ### Planned
 
 - persistent boot-safe Intel-primary + NVIDIA PRIME configuration;
 - checkpoint/rollback action framework;
+- validation of generated `minimal`, `rescue` and `full` USB bundles on an offline reference machine;
+- inventory and validation of the reference Mac's exact non-GPU PCI/USB hardware IDs and driver paths;
 - NVIDIA runtime power-management validation;
 - GNOME/switcheroo-control dedicated-GPU UX;
 - unified human/agent CLI;
+- versioned GitHub Release rescue artifacts after the bundle format is stable;
 - expansion to additional verified hardware profiles.
 
 ## 0.1.0-alpha — 2026-08-19
